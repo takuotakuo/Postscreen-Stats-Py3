@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
-# Parses the postscreen logs and display stats
+# Parses the postscreen logs and display stats 
 # mjc - 20160921
+
+#### hopefully python 3 compatible. 
 
 from collections import defaultdict
 from datetime import datetime as dt
@@ -10,11 +12,12 @@ from getopt import getopt
 from re import escape, match, search, split
 from sys import argv, exit, stdout
 from time import mktime, strptime
-from types import NoneType
+#from types import NoneType
 
+NoneType = type(None)
 
 def usage():
-    print '''
+    print('''
 postscreen_stats.py
     parses Postfix logs to compute statistics on postscreen activity
 
@@ -50,7 +53,7 @@ $ postscreen_stats.py -f maillog --geofile=GeoLiteCity.dat --mapdest=report.html
 
 Julien Vehent https://jve.linuxwall.info/
 https://github.com/jvehent/Postscreen-Stats
-'''
+''')
 
 
 # convert the syslog time stamp in unix format and store it
@@ -73,8 +76,8 @@ def gen_unix_ts(syslog_date):
 
     # check if the unix_ts is in the future then bail
     if unix_ts > mktime(now_ts.timetuple()):
-        print "ERROR: Calculated date from syslog time stamp is in the future!?"
-        print "Are you really parsing mail logs from year " + str(YEAR) + " ?"
+        print("ERROR: Calculated date from syslog time stamp is in the future!?")
+        print("Are you really parsing mail logs from year " + str(YEAR) + " ?")
         exit()
     else:
         return unix_ts
@@ -150,17 +153,17 @@ for argument, value in args_list:
         LOG_CURSOR = 3
     elif argument in ('-i', '--ip'):
         IP_FILTER = value
-        print "Filtering results on IP", IP_FILTER
+        print("Filtering results on IP", IP_FILTER)
     elif argument in ('--report'):
         if value in ('short', 'full', 'ip', 'none'):
             REPORT_MODE = value
         else:
-            print "ERROR: Unknown report type"
+            print("ERROR: Unknown report type")
             usage()
             exit()
     elif argument in ('--mapdest'):
         MAPDEST = value
-        print "HTML map file will be generated at ", MAPDEST
+        print("HTML map file will be generated at ", MAPDEST)
     elif argument in ('--map-min-conn'):
         MAP_MIN_CONN = int(value)
     elif argument in ('-h', '--help'):
@@ -182,10 +185,10 @@ if GEOFILE not in "":
             import GeoIP
             gi = GeoIP.open(GEOFILE, GeoIP.GEOIP_MEMORY_CACHE)
         except ImportError:
-            print "ERROR: Could not import pygeoip or GeoIP modules for Geolocation!"
-            print "Install one/both modules or re-run without --geofile option."
+            print("ERROR: Could not import pygeoip or GeoIP modules for Geolocation!")
+            print("Install one/both modules or re-run without --geofile option.")
             exit()
-    print "MaxMind GeoLite City database file ", GEOFILE
+    print("MaxMind GeoLite City database file ", GEOFILE)
 
 # TODO: Better handle IOError exception in open
 # i.e. User doesn't have read permission for maillog
@@ -310,21 +313,21 @@ maillog.close
 # additional reports shown in full mode only
 if REPORT_MODE in ('full', 'ip'):
     for client in ip_list:
-        print client
+        print(client)
         for log in sorted(ip_list[client].logs):
             if log in ('FIRST SEEN', 'LAST SEEN'):
-                print "\t", log, ":", dt.fromtimestamp(int(
-                    ip_list[client].logs[log])).strftime('%Y-%m-%d %H:%M:%S')
+                print("\t", log, ":", dt.fromtimestamp(int(
+                    ip_list[client].logs[log])).strftime('%Y-%m-%d %H:%M:%S'))
             else:
-                print "\t", log, ":", ip_list[client].logs[log]
-        print "\t--- postscreen actions ---"
+                print("\t", log, ":", ip_list[client].logs[log])
+        print("\t--- postscreen actions ---")
         for action in sorted(ip_list[client].actions):
-            print "\t", action, ":", ip_list[client].actions[action]
+            print("\t", action, ":", ip_list[client].actions[action])
             if action in ('DNSBL'):
-                print "\tDNSBL ranks:", ip_list[client].dnsbl_ranks
+                print("\tDNSBL ranks:", ip_list[client].dnsbl_ranks)
         if GEOFILE not in "":
-            print "\tGeoLoc:", ip_list[client].geoloc
-        print
+            print("\tGeoLoc:", ip_list[client].geoloc)
+        print()
 
 
 # store the list of blocked clients for map generation
@@ -412,31 +415,31 @@ if REPORT_MODE in ('short', 'full', 'none'):
 
 if REPORT_MODE in ('short', 'full'):
     # display unique clients and total postscreen actions
-    print "\n=== unique clients/total postscreen actions ==="
+    print("\n=== unique clients/total postscreen actions ===")
     # print the count of CONNECT first (apply the ACTION_FILTER)
-    print str(len([
-        cs.logs['CONNECT'] for cs in ip_list.itervalues()
+    print(str(len([
+        cs.logs['CONNECT'] for cs in iter(ip_list.values())
         if (cs.logs['CONNECT'] > 0 and cs.action_filter(ACTION_FILTER))])) \
         + "/" + str(sum([
-          cs.logs['CONNECT'] for cs in ip_list.itervalues()
+          cs.logs['CONNECT'] for cs in iter(ip_list.values())
           if (cs.logs['CONNECT'] > 0 and cs.action_filter(ACTION_FILTER))])) \
-        + " CONNECT"
+        + " CONNECT")
     # then print the list of actions, ACTION_FILTER was applied earlied
     # when the postscreen_stats dictionary was built
     for action in sorted(postscreen_stats):
-        print str(len([
-            cs.actions[action] for cs in ip_list.itervalues()
+        print(str(len([
+            cs.actions[action] for cs in iter(ip_list.values())
             if (cs.actions[action] > 0 and cs.action_filter(ACTION_FILTER))])) \
-            + "/" + str(postscreen_stats[action]), action
+            + "/" + str(postscreen_stats[action]), action)
 
-    print "\n=== clients statistics ==="
+    print("\n=== clients statistics ===")
     for stat in sorted(clients):
-        print clients[stat], stat
+        print(clients[stat], stat)
 
     if clients["reconnections"] > 0:
-        print "\n=== First reconnection delay (graylist) ==="
-        print "delay | <10s | 10to30s | >30to1m | >1to5m | >5to30m | " + \
-              ">30mto2h | >2hto5h | >5hto12h | >12to24h | >24h |"
+        print("\n=== First reconnection delay (graylist) ===")
+        print("delay | <10s | 10to30s | >30to1m | >1to5m | >5to30m | " + \
+              ">30mto2h | >2hto5h | >5hto12h | >12to24h | >24h |")
         # display the absolute values
         stdout.write("count | ")
         stdout.write(str(comeback['<10s']).ljust(5) + "| ")
@@ -448,7 +451,7 @@ if REPORT_MODE in ('short', 'full'):
         stdout.write(str(comeback['>2h to 5h']).ljust(8) + "| ")
         stdout.write(str(comeback['>5h to 12h']).ljust(9) + "| ")
         stdout.write(str(comeback['>12h to 24h']).ljust(9) + "| ")
-        print str(comeback['>24h']).ljust(5) + "|"
+        print(str(comeback['>24h']).ljust(5) + "|")
         # calculate and display the percentages
         getcontext().prec = 2
         dec_cameback = Decimal(clients["reconnections"])
@@ -472,12 +475,12 @@ if REPORT_MODE in ('short', 'full'):
                          dec_cameback * 100).ljust(9) + "| ")
         stdout.write(str(Decimal(comeback['>12h to 24h']) /
                          dec_cameback * 100).ljust(9) + "| ")
-        print str(Decimal(comeback['>24h']) /
-                  dec_cameback * 100).ljust(5) + "|"
+        print(str(Decimal(comeback['>24h']) /
+                  dec_cameback * 100).ljust(5) + "|")
 
     if GEOFILE not in "":
         total_blocked = Decimal(clients["blocked clients"])
-        print "\n=== Top 20 Countries of Blocked Clients ==="
+        print("\n=== Top 20 Countries of Blocked Clients ===")
         from operator import itemgetter
         sorted_countries = blocked_countries.items()
         sorted_countries.sort(key=itemgetter(1), reverse=True)
@@ -489,7 +492,7 @@ if REPORT_MODE in ('short', 'full'):
                     count_format = "%" + str(len(str(clients))) + "d"
                 client_percent = "(%5.2f%%)" % \
                     float(Decimal(clients) / total_blocked * 100)
-                print count_format % clients, client_percent, country
+                print(count_format % clients, client_percent, country)
 
 # generate the HTML for the map and store it in a file
 if MAPDEST not in "" and GEOFILE not in "":
@@ -609,4 +612,4 @@ if MAPDEST not in "" and GEOFILE not in "":
 '''
     fd.write(mapcode)
     fd.close()
-    print "Created HTML map file at ", MAPDEST
+    print("Created HTML map file at ", MAPDEST)
