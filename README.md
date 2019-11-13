@@ -1,4 +1,4 @@
-Postscreen Statistics Parser
+Postscreen Statistics Parser (Python3)
 ============================
 
 Simple script to compute some statistics on Postfix/Postscreen Activity
